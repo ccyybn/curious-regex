@@ -19,12 +19,12 @@ int main(int argc, char *argv[]) {
     // }
 
     Parser parser(regex);
-    auto node = parser.parse();
+    auto expr = parser.parseExpr();
 
-    node->print();
+    expr->print();
     std::cout << std::endl;
 
-    std::cout << "Match: " << std::endl;
     StringSlider slider(str);
-    std::cout << node->match(slider) << std::endl;
+    // auto result = (expr->match(slider) && !slider.hasMore());
+    // std::cout << "Match result: " << result << std::endl;
 }

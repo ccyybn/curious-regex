@@ -1,8 +1,18 @@
 #pragma once
 #include "ASTNode.hpp"
-#include <cstddef>
+#include "Unicode.hpp"
+#include <format>
 #include <memory>
 #include <stdexcept>
+
+/**
+
+expr    ::= contact ( "|" contact )*
+contact ::= factor ( factor )*
+factor  ::= atom [ "*" ]
+atom    ::= char | "\(" expr "\)"
+
+**/
 
 class Parser {
   private:
@@ -12,39 +22,79 @@ class Parser {
   public:
     Parser(std::u32string_view source) : source_(source) {}
 
-    std::unique_ptr<ASTNode> parse() {
-        std::unique_ptr<ContactNode> root = std::make_unique<ContactNode>();
+    char32_t peek() const {
+        if (cursor_ < source_.length())
+            return source_[cursor_];
+        return U'\0';
+    }
 
-        while (cursor_ < source_.length()) {
-            const auto ch = source_[cursor_++];
-            if (ch == U'(') {
-                std::unique_ptr<GroupNode> group =
-                    std::make_unique<GroupNode>(parse());
-                if (source_[cursor_ - 1] != U')') {
-                    throw std::runtime_error("( is not closed");
-                }
-                root->add(std::move(group));
-            } else if (ch == U')') {
-                return root;
-            } else if (ch == U'|') {
-                return parseAlter(std::move(root));
-            } else if (ch == U'*') {
-                auto last_node = root->pop();
-                if (last_node == nullptr) {
-                    throw std::runtime_error("* must follow some char");
-                }
-                root->add(std::make_unique<RepeatNode>(std::move(last_node)));
-            } else {
-                root->add(std::make_unique<CharNode>(ch));
+    std::unique_ptr<ASTNode> parseExpr(bool inner_expr = false) {
+        std::unique_ptr<ASTNode> left = std::make_unique<ContactNode>();
+
+        left = parseContact(inner_expr);
+
+        while (peek() == U'|') {
+            cursor_++;
+            std::unique_ptr<AlterNode> alt = std::make_unique<AlterNode>();
+            alt->setLeft(std::move(left));
+            alt->setRight(parseContact(inner_expr));
+            left = std::move(alt);
+        }
+
+        if (inner_expr) {
+            if (peek() != U')') {
+                throw std::runtime_error("( is not closed");
             }
+        } else {
+            if (peek() != U'\0') {
+                if (peek() == U')') {
+                    throw std::runtime_error("More ) than expected");
+                } else {
+                    throw std::runtime_error(
+                        "Unexpected trailing characters: " +
+                        u32_to_utf8(peek()));
+                }
+            }
+        }
+
+        return left;
+    }
+
+    std::unique_ptr<ContactNode> parseContact(bool inner_expr) {
+        std::unique_ptr<ContactNode> root = std::make_unique<ContactNode>();
+        while (cursor_ < source_.length() && peek() != U'|' && peek() != U')') {
+            root->add(parseFactor());
         }
         return root;
     }
 
-    std::unique_ptr<AlterNode> parseAlter(std::unique_ptr<ContactNode> left) {
-        std::unique_ptr<AlterNode> root = std::make_unique<AlterNode>();
-        root->setLeft(std::move(left));
-        root->setRight(std::move(parse()));
-        return root;
+    std::unique_ptr<ASTNode> parseFactor() {
+        std::unique_ptr<ASTNode> factor;
+        factor = parseAtom();
+        if (peek() == U'*') {
+            cursor_++;
+            factor = std::make_unique<RepeatNode>(std::move(factor));
+        }
+        return factor;
+    }
+
+    std::unique_ptr<ASTNode> parseAtom() {
+        std::unique_ptr<ASTNode> atom;
+
+        if (peek() == U'(') {
+            cursor_++;
+            atom = std::make_unique<GroupNode>(parseExpr(true));
+            cursor_++;
+        } else if (cursor_ >= source_.length()) {
+            throw std::runtime_error("No more char to parse");
+        } else if (peek() == U')' || peek() == U'*' || peek() == U'|') {
+            throw std::runtime_error(std::format(
+                "Invalid char for parsing atom: {}", u32_to_utf8(peek())));
+        } else {
+            atom = std::make_unique<CharNode>(peek());
+            cursor_++;
+        }
+
+        return atom;
     }
 };
