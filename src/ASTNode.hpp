@@ -25,6 +25,28 @@ class ASTNode {
         }
     };
     virtual size_t getId() { return id_; }
+    virtual std::string getName() const {
+        std::string type_name;
+        switch (type) {
+        case CONTACT_NODE:
+            type_name = "Contact";
+            break;
+        case GROUP_NODE:
+            type_name = "Group";
+            break;
+        case ALTER_NODE:
+            type_name = "Alter";
+            break;
+        case REPEAT_NODE:
+            type_name = "Repeat";
+            break;
+        case CHAR_NODE:
+            type_name = "Char";
+            break;
+        }
+
+        return std::format("{} {}", type_name, id_);
+    }
 
     // virtual bool match(StringSlider &str) = 0;
     // virtual std::vector<std::unique_ptr<NFAState>> toNFA() const = 0;
@@ -47,7 +69,7 @@ class RepeatNode : public ASTNode {
 
     void print(uint8_t indent = 0) const override {
         ASTNode::print(indent);
-        std::cout << std::format("[Repeat {}]: ", id_);
+        std::cout << std::format("[{}]: ", getName());
         std::cout << std::endl;
         child_->print(indent + indent_incr_);
     }
@@ -114,7 +136,7 @@ class ContactNode : public ASTNode {
 
     void print(uint8_t indent = 0) const override {
         ASTNode::print(indent);
-        std::cout << std::format("[Contact {}]: ", id_);
+        std::cout << std::format("[{}]: ", getName());
         std::cout << std::endl;
         for (const auto &ptr : children_) {
             ptr->print(indent + indent_incr_);
@@ -192,7 +214,7 @@ class GroupNode : public ASTNode {
 
     void print(uint8_t indent = 0) const override {
         ASTNode::print(indent);
-        std::cout << std::format("[Group {}]: ", id_);
+        std::cout << std::format("[{}]: ", getName());
         std::cout << std::endl;
         child_->print(indent + indent_incr_);
     }
@@ -214,7 +236,7 @@ class CharNode : public ASTNode {
 
     void print(uint8_t indent = 0) const override {
         ASTNode::print(indent);
-        std::cout << std::format("[Char {}]: ", id_);
+        std::cout << std::format("[{}]: ", getName());
         std::cout << u32_to_utf8(ch_) << std::endl;
     }
 
@@ -248,7 +270,7 @@ class AlterNode : public ASTNode {
 
     void print(uint8_t indent = 0) const override {
         ASTNode::print(indent);
-        std::cout << std::format("[Alter {}]: ", id_) << std::endl;
+        std::cout << std::format("[{}]: ", getName()) << std::endl;
         ASTNode::print(indent + indent_incr_);
         std::cout << "Left:" << std::endl;
         left_->print(indent + indent_incr_);

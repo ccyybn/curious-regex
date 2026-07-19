@@ -1,14 +1,14 @@
-#include "ASTNode.hpp"
-#include "NFAState.hpp"
-#include "Parser.hpp"
-#include "Unicode.hpp"
 #include <iostream>
 #include <string>
 
-int main(int argc, char *argv[]) {
+#include "ASTNode.hpp"
+#include "Matcher.hpp"
+#include "Parser.hpp"
+#include "Unicode.hpp"
+
+int main(int argc, char* argv[]) {
     if (argc < 3) {
-        std::cerr << "Usage: " << argv[0]
-                  << " <Regular Expression> <Target String>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <Regular Expression> <Target String>" << std::endl;
         return 1;
     }
 
@@ -18,21 +18,27 @@ int main(int argc, char *argv[]) {
     // for (char32_t c : regex) {
     //     std::cout << u32_to_utf8(c) << std::endl;
     // }
+    try {
+        Parser parser(regex);
+        auto expr = parser.parseExpr();
 
-    Parser parser(regex);
-    auto expr = parser.parseExpr();
+        expr->print();
+        std::cout << std::endl;
 
-    expr->print();
-    std::cout << std::endl;
+        StringSlider slider(str);
 
-    StringSlider slider(str);
+        NFABuilder builder(*expr.get());
+        NFAFragment frag = builder.build();
+        frag.entry->print();
+        std::cout << std::endl << std::endl;
+        builder.exportGraph(std::cout);
 
-    NFABuilder builder(*expr.get());
-    NFAFragment frag = builder.build();
-    frag.entry->print();
-    std::cout << std::endl << std::endl;
-    builder.exportToDot(std::cout);
+        bool result = backTrackMatch(frag.entry, str);
+        std::cout << "Result: " << result << std::endl;
 
-    // auto result = (expr->match(slider) && !slider.hasMore());
-    // std::cout << "Match result: " << result << std::endl;
+        // auto result = (expr->match(slider) && !slider.hasMore());
+        // std::cout << "Match result: " << result << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+    }
 }
