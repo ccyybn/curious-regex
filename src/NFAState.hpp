@@ -1,25 +1,80 @@
 #include "ASTNode.hpp"
+#include "Unicode.hpp"
 #include <cstddef>
+#include <format>
 #include <memory>
 #include <stdexcept>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
-enum STATE_TYPE { CHAR, EPSILON };
+enum STATE_TYPE { CHAR, EPSILON, END };
 
 inline size_t NFASTATE_ID = 0;
 
 class NFAState {
   private:
     size_t id_;
+    size_t ast_id_;
     STATE_TYPE type_;
     char32_t accept_ch_;
 
   public:
     NFAState *next1_ = nullptr;
     NFAState *next2_ = nullptr;
-    NFAState() : type_(EPSILON) {};
-    NFAState(char32_t accept_ch) : type_(CHAR), accept_ch_(accept_ch) {};
+    NFAState(size_t ast_id) : ast_id_(ast_id), type_(EPSILON) {
+        id_ = NFASTATE_ID++;
+    };
+    NFAState(size_t ast_id, STATE_TYPE type) : ast_id_(ast_id), type_(type) {
+        id_ = NFASTATE_ID++;
+    };
+    NFAState(size_t ast_id, char32_t accept_ch)
+        : ast_id_(ast_id), type_(CHAR), accept_ch_(accept_ch) {
+        id_ = NFASTATE_ID++;
+    };
+
+    std::string nodeName() const {
+        switch (type_) {
+        case CHAR:
+            return std::format("({}.{}).{}", id_, u32_to_utf8(accept_ch_),
+                               ast_id_);
+        case EPSILON:
+            return std::format("({}).{}", id_, ast_id_);
+        case END:
+            return "(END)";
+        default:
+            return "";
+        }
+    }
+
+    void print() const {
+        std::unordered_set<size_t> printed;
+        print(printed);
+    }
+
+    void print(std::unordered_set<size_t> printed) const {
+        std::cout << nodeName();
+        if (printed.contains(id_)) {
+            std::cout << "--->(LOOP)";
+            return;
+        } else {
+            printed.insert(id_);
+        }
+
+        if (next1_) {
+            std::cout << "--->";
+            next1_->print(printed);
+        }
+
+        if (next2_) {
+            std::cout << std::endl;
+            std::cout << nodeName();
+            std::cout << "--->";
+            next2_->print(printed);
+        }
+    }
+
+    friend class NFABuilder;
 };
 
 struct NFAFragment {
@@ -32,78 +87,119 @@ class NFABuilder {
     ASTNode &root_;
     std::vector<std::unique_ptr<NFAState>> all_states_;
 
-    void link(NFAState *previous, NFAState *current) {
-        if (previous->next1_ == nullptr) {
-            previous->next1_ = current;
-        } else if (previous->next2_ == nullptr) {
-            previous->next2_ = current;
-        } else {
-            throw std::runtime_error(
-                "No free pointer to link to the next state");
-        }
-    }
-
   public:
     NFABuilder(ASTNode &root) : root_(root) {}
-    NFAState *build(ASTNode &node) {
-        NFAState *entry_state;
+
+    NFAFragment build() {
+        auto end = std::make_unique<NFAState>(0, END);
+        NFAState *end_ptr = end.get();
+
+        NFAFragment frag = build(root_);
+        frag.exit->next1_ = end.get();
+        all_states_.push_back(std::move(end));
+
+        return {frag.entry, end_ptr};
+    }
+
+    NFAFragment build(ASTNode &node) {
         switch (node.type) {
         case CONTACT_NODE: {
             ContactNode &contact_node = static_cast<ContactNode &>(node);
-            std::unique_ptr<NFAState> ptr = std::make_unique<NFAState>();
+            NFAFragment first_frag;
+            NFAFragment last_frag;
 
-            NFAState *previous_state = nullptr;
-            ASTNode *previous_node = nullptr;
             for (int i = 0; i < contact_node.size(); i++) {
                 ASTNode &current_node = contact_node.getChild(i);
-                NFAState *current_state = build(current_node);
+                NFAFragment current_frag = build(current_node);
                 if (i == 0) {
-                    ptr->next1_ = current_state;
+                    first_frag = current_frag;
+                } else {
+                    last_frag.exit->next1_ = current_frag.entry;
                 }
-                if (previous_node != nullptr) {
-                    if (previous_node->type == ALTER_NODE) {
-
-                    } else {
-                        link(previous_state, current_state);
-                    }
-                }
-                previous_state = current_state;
-                previous_node = &current_node;
+                last_frag = current_frag;
             }
-
-            all_states_.push_back(std::move(ptr));
-            entry_state = all_states_.back().get();
-            break;
+            return {first_frag.entry, last_frag.exit};
         }
         case ALTER_NODE: {
             AlterNode &alter_node = static_cast<AlterNode &>(node);
-            std::unique_ptr<NFAState> ptr = std::make_unique<NFAState>();
-            ptr->next1_ = build(alter_node.getLeft());
-            ptr->next2_ = build(alter_node.getRight());
-            all_states_.push_back(std::move(ptr));
-            entry_state = all_states_.back().get();
-            break;
+            auto entry = std::make_unique<NFAState>(alter_node.getId());
+            auto exit = std::make_unique<NFAState>(alter_node.getId());
+            NFAState *entry_ptr = entry.get();
+            NFAState *exit_ptr = exit.get();
+
+            NFAFragment left_frag = build(alter_node.getLeft());
+            NFAFragment right_frag = build(alter_node.getRight());
+
+            entry_ptr->next1_ = left_frag.entry;
+            entry_ptr->next2_ = right_frag.entry;
+            left_frag.exit->next1_ = exit_ptr;
+            right_frag.exit->next1_ = exit_ptr;
+
+            all_states_.push_back(std::move(entry));
+            all_states_.push_back(std::move(exit));
+            return {entry_ptr, exit_ptr};
         }
         case REPEAT_NODE: {
             RepeatNode &repeat_node = static_cast<RepeatNode &>(node);
-            std::unique_ptr<NFAState> ptr = std::make_unique<NFAState>();
-            NFAState *child_state = build(repeat_node.getChild());
-            ptr->next1_ = child_state;
-            all_states_.push_back(std::move(ptr));
-            entry_state = all_states_.back().get();
-            child_state->next1_ = entry_state;
-            break;
+            auto entry = std::make_unique<NFAState>(repeat_node.getId());
+            auto exit = std::make_unique<NFAState>(repeat_node.getId());
+            NFAState *entry_ptr = entry.get();
+            NFAState *exit_ptr = exit.get();
+
+            NFAFragment child_frag = build(repeat_node.getChild());
+            entry_ptr->next1_ = child_frag.entry;
+            child_frag.exit->next1_ = child_frag.entry;
+            child_frag.exit->next2_ = exit_ptr;
+
+            all_states_.push_back(std::move(entry));
+            all_states_.push_back(std::move(exit));
+            return {entry_ptr, exit_ptr};
         }
         case CHAR_NODE: {
             CharNode &char_node = static_cast<CharNode &>(node);
-            auto ptr = std::make_unique<NFAState>(char_node.getChar());
-            all_states_.push_back(std::move(ptr));
-            entry_state = all_states_.back().get();
-            break;
+            auto unique_ptr = std::make_unique<NFAState>(char_node.getId(),
+                                                         char_node.getChar());
+            NFAState *ptr = unique_ptr.get();
+            all_states_.push_back(std::move(unique_ptr));
+            return {ptr, ptr};
+        }
+        case GROUP_NODE: {
+            GroupNode &group_node = static_cast<GroupNode &>(node);
+            auto entry = std::make_unique<NFAState>(group_node.getId());
+            auto exit = std::make_unique<NFAState>(group_node.getId());
+            NFAState *entry_ptr = entry.get();
+            NFAState *exit_ptr = exit.get();
+
+            NFAFragment child_frag = build(group_node.getChild());
+            entry_ptr->next1_ = child_frag.entry;
+            child_frag.exit->next1_ = exit_ptr;
+
+            all_states_.push_back(std::move(entry));
+            all_states_.push_back(std::move(exit));
+            return {entry_ptr, exit_ptr};
         }
         default:
             throw std::runtime_error("Unexpected AST node");
         }
-        return entry_state;
+    }
+
+    void exportToDot(std::ostream &out) {
+        out << "digraph NFA {\n";
+        out << "  rankdir=LR;\n";
+        out << "  node [shape=circle];\n";
+
+        for (const auto &ptr : all_states_) {
+            NFAState *s = ptr.get();
+
+            out << std::format("  {} [label=\"{}\"];\n", s->id_, s->nodeName());
+
+            if (s->next1_) {
+                out << std::format("  {} -> {};\n", s->id_, s->next1_->id_);
+            }
+            if (s->next2_) {
+                out << std::format("  {} -> {};\n", s->id_, s->next2_->id_);
+            }
+        }
+        out << "}\n";
     }
 };

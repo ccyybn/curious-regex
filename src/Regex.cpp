@@ -1,4 +1,5 @@
 #include "ASTNode.hpp"
+#include "NFAState.hpp"
 #include "Parser.hpp"
 #include "Unicode.hpp"
 #include <iostream>
@@ -25,6 +26,13 @@ int main(int argc, char *argv[]) {
     std::cout << std::endl;
 
     StringSlider slider(str);
+
+    NFABuilder builder(*expr.get());
+    NFAFragment frag = builder.build();
+    frag.entry->print();
+    std::cout << std::endl << std::endl;
+    builder.exportToDot(std::cout);
+
     // auto result = (expr->match(slider) && !slider.hasMore());
     // std::cout << "Match result: " << result << std::endl;
 }

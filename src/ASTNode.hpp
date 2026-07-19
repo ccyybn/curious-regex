@@ -24,6 +24,7 @@ class ASTNode {
             std::cout << " ";
         }
     };
+    virtual size_t getId() { return id_; }
 
     // virtual bool match(StringSlider &str) = 0;
     // virtual std::vector<std::unique_ptr<NFAState>> toNFA() const = 0;
