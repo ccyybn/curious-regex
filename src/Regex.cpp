@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
 
         NFABuilder builder(*expr.get());
         NFAFragment frag = builder.build();
-        frag.entry->print();
+        // frag.entry->print();
         std::cout << std::endl << std::endl;
         builder.exportGraph(std::cout);
 

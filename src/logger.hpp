@@ -19,6 +19,7 @@ class Log {
 
         std::string message = std::vformat(fmt, std::make_format_args(static_cast<const Args&>(args)...));
 
-        std::cout << std::format("[DEBUG] [{}:{}] {}\n", location.file_name(), location.line(), message);
+        // std::cout << std::format("[DEBUG] [{}:{}] {}\n", location.file_name(), location.line(), message);
+        std::cout << std::format("{}\n", message);
     }
 };
