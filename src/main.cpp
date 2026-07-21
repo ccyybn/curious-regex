@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 
+#include "engine/engine.hpp"
 #include "pattern.hpp"
 
 int main(int argc, char* argv[]) {
@@ -14,6 +15,7 @@ int main(int argc, char* argv[]) {
 
     try {
         Pattern pattern(regex);
+        pattern.setEngine(EngineType::ParallelNFA);
         bool result = pattern.match(str);
         std::cout << "Result: " << result << std::endl;
 

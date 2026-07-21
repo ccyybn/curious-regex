@@ -28,8 +28,8 @@ class Parser {
         return U'\0';
     }
 
-    std::unique_ptr<ASTNode> parseExpr(bool inner_expr = false) {
-        std::unique_ptr<ASTNode> left = std::make_unique<ContactNode>();
+    std::unique_ptr<AstNode> parseExpr(bool inner_expr = false) {
+        std::unique_ptr<AstNode> left = std::make_unique<ContactNode>();
 
         left = parseContact(inner_expr);
 
@@ -66,8 +66,8 @@ class Parser {
         return root;
     }
 
-    std::unique_ptr<ASTNode> parseFactor() {
-        std::unique_ptr<ASTNode> factor;
+    std::unique_ptr<AstNode> parseFactor() {
+        std::unique_ptr<AstNode> factor;
         factor = parseAtom();
         if (peek() == U'*') {
             cursor_++;
@@ -76,8 +76,8 @@ class Parser {
         return factor;
     }
 
-    std::unique_ptr<ASTNode> parseAtom() {
-        std::unique_ptr<ASTNode> atom;
+    std::unique_ptr<AstNode> parseAtom() {
+        std::unique_ptr<AstNode> atom;
 
         if (peek() == U'(') {
             cursor_++;

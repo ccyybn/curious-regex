@@ -11,21 +11,21 @@ enum CONTROL_TYPE { IN, OUT, NORMAL };
 
 inline size_t NFASTATE_ID = 0;
 
-class NFAState;
+class NfaState;
 
-class NFAState {
+class NfaState {
    private:
     size_t id_;
     STATE_TYPE type_;
     char32_t accept_ch_;
     std::string name_;
     CONTROL_TYPE control_type_ = NORMAL;
-    const ASTNode* ast_node_ = nullptr;
+    const AstNode* ast_node_ = nullptr;
 
    public:
-    NFAState* next1_ = nullptr;
-    NFAState* next2_ = nullptr;
-    NFAState(STATE_TYPE type, char32_t accept_ch) : type_(type), accept_ch_(accept_ch) {
+    NfaState* next1_ = nullptr;
+    NfaState* next2_ = nullptr;
+    NfaState(STATE_TYPE type, char32_t accept_ch) : type_(type), accept_ch_(accept_ch) {
         id_ = NFASTATE_ID++;
         switch (type) {
             case CHAR:
@@ -40,9 +40,9 @@ class NFAState {
         }
     };
 
-    NFAState(char32_t accept_ch) : NFAState(CHAR, accept_ch) {};
+    NfaState(char32_t accept_ch) : NfaState(CHAR, accept_ch) {};
 
-    NFAState() : NFAState(EPSILON, 0) {};
+    NfaState() : NfaState(EPSILON, 0) {};
 
     std::string controlTypeStr() const {
         switch (control_type_) {
@@ -67,19 +67,21 @@ class NFAState {
 
     char32_t getAcceptChar() { return accept_ch_; }
 
-    NFAState* setIn(const ASTNode& node) {
+    bool accept(char32_t ch) { return type_ == CHAR && ch == accept_ch_; }
+
+    NfaState* setIn(const AstNode& node) {
         ast_node_ = &node;
         control_type_ = IN;
         return this;
     }
 
-    NFAState* setOut(const ASTNode& node) {
+    NfaState* setOut(const AstNode& node) {
         ast_node_ = &node;
         control_type_ = OUT;
         return this;
     }
 
-    NFAState* setAST(const ASTNode& node) {
+    NfaState* setAST(const AstNode& node) {
         ast_node_ = &node;
         return this;
     }

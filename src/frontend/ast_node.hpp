@@ -11,14 +11,14 @@ enum NODE_TYPE { CONTACT_NODE, GROUP_NODE, ALTER_NODE, REPEAT_NODE, CHAR_NODE };
 
 inline size_t NODE_ID = 0;
 
-class ASTNode {
+class AstNode {
    protected:
     size_t id_;
     uint8_t indent_incr_ = 4;
 
    public:
     NODE_TYPE type;
-    virtual ~ASTNode() = 0;
+    virtual ~AstNode() = 0;
     virtual void print(uint8_t indent = 0) const {
         for (int i = 0; i < indent; i++) {
             std::cout << " ";
@@ -48,34 +48,34 @@ class ASTNode {
         return std::format("{} {}", type_name, id_);
     }
 
-    friend class NFAState;
+    friend class NfaState;
 };
 
-inline ASTNode::~ASTNode() {}
+inline AstNode::~AstNode() {}
 
-class RepeatNode : public ASTNode {
+class RepeatNode : public AstNode {
    private:
-    std::unique_ptr<ASTNode> child_;
+    std::unique_ptr<AstNode> child_;
 
    public:
-    RepeatNode(std::unique_ptr<ASTNode> node) : child_(std::move(node)) {
+    RepeatNode(std::unique_ptr<AstNode> node) : child_(std::move(node)) {
         id_ = NODE_ID++;
         type = REPEAT_NODE;
     }
 
-    ASTNode& getChild() const { return *child_.get(); }
+    AstNode& getChild() const { return *child_.get(); }
 
     void print(uint8_t indent = 0) const override {
-        ASTNode::print(indent);
+        AstNode::print(indent);
         std::cout << std::format("[{}]: ", getName());
         std::cout << std::endl;
         child_->print(indent + indent_incr_);
     }
 };
 
-class ContactNode : public ASTNode {
+class ContactNode : public AstNode {
    private:
-    std::vector<std::unique_ptr<ASTNode>> children_;
+    std::vector<std::unique_ptr<AstNode>> children_;
 
    public:
     ContactNode() {
@@ -83,11 +83,11 @@ class ContactNode : public ASTNode {
         type = CONTACT_NODE;
     }
 
-    void add(std::unique_ptr<ASTNode> node) { children_.push_back(std::move(node)); }
+    void add(std::unique_ptr<AstNode> node) { children_.push_back(std::move(node)); }
 
     size_t size() { return children_.size(); }
 
-    ASTNode& getChild(size_t index) const {
+    AstNode& getChild(size_t index) const {
         if (index < children_.size()) {
             return *children_[index].get();
         } else {
@@ -96,7 +96,7 @@ class ContactNode : public ASTNode {
     }
 
     void print(uint8_t indent = 0) const override {
-        ASTNode::print(indent);
+        AstNode::print(indent);
         std::cout << std::format("[{}]: ", getName());
         std::cout << std::endl;
         for (const auto& ptr : children_) {
@@ -105,27 +105,27 @@ class ContactNode : public ASTNode {
     }
 };
 
-class GroupNode : public ASTNode {
+class GroupNode : public AstNode {
    private:
-    std::unique_ptr<ASTNode> child_;
+    std::unique_ptr<AstNode> child_;
 
    public:
-    GroupNode(std::unique_ptr<ASTNode> child) : child_(std::move(child)) {
+    GroupNode(std::unique_ptr<AstNode> child) : child_(std::move(child)) {
         id_ = NODE_ID++;
         type = GROUP_NODE;
     }
 
-    ASTNode& getChild() const { return *child_.get(); }
+    AstNode& getChild() const { return *child_.get(); }
 
     void print(uint8_t indent = 0) const override {
-        ASTNode::print(indent);
+        AstNode::print(indent);
         std::cout << std::format("[{}]: ", getName());
         std::cout << std::endl;
         child_->print(indent + indent_incr_);
     }
 };
 
-class CharNode : public ASTNode {
+class CharNode : public AstNode {
    private:
     char32_t ch_;
 
@@ -138,37 +138,37 @@ class CharNode : public ASTNode {
     char32_t getChar() { return ch_; }
 
     void print(uint8_t indent = 0) const override {
-        ASTNode::print(indent);
+        AstNode::print(indent);
         std::cout << std::format("[{}]: ", getName());
         std::cout << u32_to_utf8(ch_) << std::endl;
     }
 };
 
-class AlterNode : public ASTNode {
+class AlterNode : public AstNode {
    private:
-    std::unique_ptr<ASTNode> left_;
-    std::unique_ptr<ASTNode> right_;
+    std::unique_ptr<AstNode> left_;
+    std::unique_ptr<AstNode> right_;
 
    public:
     AlterNode() {
         id_ = NODE_ID++;
         type = ALTER_NODE;
     }
-    void setLeft(std::unique_ptr<ASTNode> left) { left_ = std::move(left); }
+    void setLeft(std::unique_ptr<AstNode> left) { left_ = std::move(left); }
 
-    void setRight(std::unique_ptr<ASTNode> right) { right_ = std::move(right); }
+    void setRight(std::unique_ptr<AstNode> right) { right_ = std::move(right); }
 
-    ASTNode& getLeft() const { return *left_.get(); }
+    AstNode& getLeft() const { return *left_.get(); }
 
-    ASTNode& getRight() const { return *right_.get(); }
+    AstNode& getRight() const { return *right_.get(); }
 
     void print(uint8_t indent = 0) const override {
-        ASTNode::print(indent);
+        AstNode::print(indent);
         std::cout << std::format("[{}]: ", getName()) << std::endl;
-        ASTNode::print(indent + indent_incr_);
+        AstNode::print(indent + indent_incr_);
         std::cout << "Left:" << std::endl;
         left_->print(indent + indent_incr_);
-        ASTNode::print(indent + indent_incr_);
+        AstNode::print(indent + indent_incr_);
         std::cout << "Right:" << std::endl;
         right_->print(indent + indent_incr_);
         std::cout << std::endl;

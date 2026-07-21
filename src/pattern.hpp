@@ -5,6 +5,7 @@
 #include "automata/nfa_state.hpp"
 #include "engine/backtrack.hpp"
 #include "engine/engine.hpp"
+#include "engine/parallel.hpp"
 #include "frontend/ast_node.hpp"
 #include "frontend/parser.hpp"
 
@@ -27,7 +28,7 @@ class Pattern {
                 engine_ = std::make_unique<BacktrackEngine>(entry_);
                 break;
             case EngineType::ParallelNFA:
-                // engine_ = std::make_unique<ParallelNfaEngine>(entry_);
+                engine_ = std::make_unique<ParallelNfaEngine>(entry_);
                 break;
             case EngineType::DFA:
                 // engine_ = std::make_unique<DfaEngine>(entry_);
@@ -42,8 +43,7 @@ class Pattern {
             case EngineType::Backtrack:
                 return BacktrackEngine(entry_).match(str);
             case EngineType::ParallelNFA:
-                // return ParallelNfaEngine(entry_).match(str);
-                return false;
+                return ParallelNfaEngine(entry_).match(str);
             case EngineType::DFA:
                 // return DfaEngine(entry_).match(str);
                 return false;
@@ -55,8 +55,8 @@ class Pattern {
 
    private:
     std::unique_ptr<NFABuilder> builder_;
-    std::unique_ptr<ASTNode> ast_node_;
-    NFAState* entry_;
+    std::unique_ptr<AstNode> ast_node_;
+    NfaState* entry_;
     EngineType type_;
     std::unique_ptr<IMatchEngine> engine_;
 };
