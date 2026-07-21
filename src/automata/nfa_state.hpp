@@ -1,14 +1,13 @@
 #include <cstddef>
 #include <format>
 #include <memory>
-#include <stack>
 #include <stdexcept>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
-#include "ASTNode.hpp"
-#include "Unicode.hpp"
+#include "frontend/ast_node.hpp"
+#include "utils/unicode.hpp"
 
 enum STATE_TYPE { CHAR, EPSILON, END };
 enum CONTROL_TYPE { IN, OUT, NORMAL };
@@ -65,6 +64,8 @@ class NFAState {
     CONTROL_TYPE getControlType() const { return control_type_; }
 
     NODE_TYPE getAstType() const { return ast_node_->type; };
+
+    size_t getASTId() const { return ast_node_->id_; }
 
     STATE_TYPE getType() { return type_; }
 

@@ -1,4 +1,3 @@
-#include "Unicode.hpp"
 #include <cstddef>
 #include <cstdio>
 #include <format>
@@ -6,19 +5,20 @@
 #include <stdexcept>
 #include <string_view>
 
+#include "unicode.hpp"
+
 class StringSlider {
-  private:
+   private:
     std::u32string_view str_;
     size_t cursor_ = 0;
 
-  public:
+   public:
     StringSlider(const std::u32string_view str) : str_(str) {}
     bool hasMore() const { return cursor_ < str_.length(); }
 
     void revert(size_t step) {
         if (step > cursor_) {
-            throw std::runtime_error(std::format(
-                "Cannot revert when step > cursor {} > {}", step, cursor_));
+            throw std::runtime_error(std::format("Cannot revert when step > cursor {} > {}", step, cursor_));
         }
         cursor_ -= step;
     }

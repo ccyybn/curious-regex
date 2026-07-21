@@ -1,10 +1,8 @@
 #include <iostream>
 #include <string>
 
-#include "ASTNode.hpp"
-#include "Matcher.hpp"
-#include "Parser.hpp"
-#include "Unicode.hpp"
+#include "engine/backtrack_engine.hpp"
+#include "frontend/parser.hpp"
 
 int main(int argc, char* argv[]) {
     if (argc < 3) {
@@ -25,15 +23,13 @@ int main(int argc, char* argv[]) {
         expr->print();
         std::cout << std::endl;
 
-        StringSlider slider(str);
-
         NFABuilder builder(*expr.get());
         NFAFragment frag = builder.build();
         // frag.entry->print();
         std::cout << std::endl << std::endl;
         builder.exportGraph(std::cout);
-
-        bool result = backTrackMatch(frag.entry, str);
+        BacktrackEngine engine(frag.entry);
+        bool result = engine.match(str);
         std::cout << "Result: " << result << std::endl;
 
         // auto result = (expr->match(slider) && !slider.hasMore());

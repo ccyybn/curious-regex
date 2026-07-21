@@ -1,9 +1,10 @@
 #pragma once
-#include "ASTNode.hpp"
-#include "Unicode.hpp"
 #include <format>
 #include <memory>
 #include <stdexcept>
+
+#include "../utils/unicode.hpp"
+#include "ast_node.hpp"
 
 /**
 
@@ -15,16 +16,15 @@ atom    ::= char | "\(" expr "\)"
 **/
 
 class Parser {
-  private:
+   private:
     std::u32string_view source_;
     size_t cursor_ = 0;
 
-  public:
+   public:
     Parser(std::u32string_view source) : source_(source) {}
 
     char32_t peek() const {
-        if (cursor_ < source_.length())
-            return source_[cursor_];
+        if (cursor_ < source_.length()) return source_[cursor_];
         return U'\0';
     }
 
@@ -50,9 +50,7 @@ class Parser {
                 if (peek() == U')') {
                     throw std::runtime_error("More ) than expected");
                 } else {
-                    throw std::runtime_error(
-                        "Unexpected trailing characters: " +
-                        u32_to_utf8(peek()));
+                    throw std::runtime_error("Unexpected trailing characters: " + u32_to_utf8(peek()));
                 }
             }
         }
@@ -88,8 +86,7 @@ class Parser {
         } else if (cursor_ >= source_.length()) {
             throw std::runtime_error("No more char to parse");
         } else if (peek() == U')' || peek() == U'*' || peek() == U'|') {
-            throw std::runtime_error(std::format(
-                "Invalid char for parsing atom: {}", u32_to_utf8(peek())));
+            throw std::runtime_error(std::format("Invalid char for parsing atom: {}", u32_to_utf8(peek())));
         } else {
             atom = std::make_unique<CharNode>(peek());
             cursor_++;
