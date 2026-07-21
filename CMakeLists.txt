@@ -13,3 +13,29 @@ target_include_directories(curious_regex_lib
 add_executable(curious-regex src/main.cpp)
 
 target_link_libraries(curious-regex PRIVATE curious_regex_lib)
+
+include(CTest)
+
+if(BUILD_TESTING)
+    include(FetchContent)
+    
+    FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG        v3.5.2
+    )
+    FetchContent_MakeAvailable(Catch2)
+
+    add_executable(unit_tests
+        tests/test_engine.cpp
+    )
+
+    target_link_libraries(unit_tests
+        PRIVATE
+            curious_regex_lib
+            Catch2::Catch2WithMain
+    )
+
+    include(Catch)
+    catch_discover_tests(unit_tests)
+endif()
