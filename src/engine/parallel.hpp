@@ -36,8 +36,6 @@ void findNext(NfaState* current, SearchRecorder& recorder) {
 }
 
 std::unordered_set<NfaState*> searchNextStates(const std::unordered_set<NfaState*>& current_states) {
-    std::vector<NfaState*> next_states;
-
     SearchRecorder recorder = {};
     for (const auto& state : current_states) {
         findNext(state, recorder);
