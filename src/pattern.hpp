@@ -4,6 +4,7 @@
 #include "automata/builder.hpp"
 #include "automata/nfa_state.hpp"
 #include "engine/backtrack.hpp"
+#include "engine/dfa.hpp"
 #include "engine/engine.hpp"
 #include "engine/parallel.hpp"
 #include "frontend/ast_node.hpp"
@@ -17,7 +18,7 @@ class Pattern {
         ast_node_->print();
         builder_ = std::make_unique<NFABuilder>(*ast_node_.get());
         entry_ = builder_->build().entry;
-        builder_->exportGraph(std::cout);
+        builder_->exportMermaid(std::cout);
         setEngine(default_engine);
     }
 
@@ -31,7 +32,7 @@ class Pattern {
                 engine_ = std::make_unique<ParallelNfaEngine>(entry_);
                 break;
             case EngineType::DFA:
-                // engine_ = std::make_unique<DfaEngine>(entry_);
+                engine_ = std::make_unique<DfaEngine>(entry_);
                 break;
         }
     }
@@ -45,8 +46,7 @@ class Pattern {
             case EngineType::ParallelNFA:
                 return ParallelNfaEngine(entry_).match(str);
             case EngineType::DFA:
-                // return DfaEngine(entry_).match(str);
-                return false;
+                return DfaEngine(entry_).match(str);
         }
         return false;
     }

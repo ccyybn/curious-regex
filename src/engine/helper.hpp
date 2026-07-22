@@ -1,77 +1,103 @@
-#include <queue>
-
+#pragma once
+#include "automata/dfa_state.hpp"
 #include "automata/nfa_state.hpp"
+#include "utils/logger.hpp"
 
-inline std::string remainStr(const std::u32string_view& str, size_t cursor) {
-    std::string s;
-    for (size_t i = cursor; i < str.length(); i++) {
-        s += u32_to_utf8(str[i]);
-    }
-    return s;
-}
-
-namespace backtrack_ {
-// LoopSegment is for printing only, has no impact on the algorithm.
-struct LoopSegment {
-    NfaState* state;
-    size_t cursor;
+struct NfaSearchRecorder {
+    std::unordered_set<NfaState*> visited_states;
+    std::unordered_set<NfaState*> next_states;
 };
 
-inline void printLoopSegment(const std::u32string_view& str, std::vector<std::queue<LoopSegment>> loop_segment_recorder) {
-    // This code is used to print the loop segments when using ((a*))* to match aaaab
-    // For example:
-    // aaaa,b
-    // aaa,a,b
-    // aaa,ab
-    // aa,aa,b
-    // aa,a,a,b
-    // aa,a,ab
-    // aa,aab
-    // a,aaa,b
-    // a,aa,a,b
-    // a,aa,ab
-    // a,a,aa,b
-    // a,a,a,a,b
-    // a,a,a,ab
-    // a,a,aab
-    // a,aaab
-    // ,aaaa,b
-    // ,aaa,a,b
-    // ,aaa,ab
-    // ,aa,aa,b
-    // ,aa,a,a,b
-    // ,aa,a,ab
-    // ,aa,aab
-    // ,a,aaa,b
-    // ,a,aa,a,b
-    // ,a,aa,ab
-    // ,a,a,aa,b
-    // ,a,a,a,a,b
-    // ,a,a,a,ab
-    // ,a,a,aab
-    // ,a,aaab
-    // ,aaaab
-    // aaaab
-    for (std::queue<LoopSegment>& loop_segment : loop_segment_recorder) {
-        for (int i = 0; i < str.length(); i++) {
-            while (!loop_segment.empty()) {
-                LoopSegment& seg = loop_segment.front();
-                if (seg.cursor == i) {
-                    if (seg.state->getASTId() == 6) {
-                        std::cout << ",";
-                    }
-                    loop_segment.pop();
-                } else {
-                    break;
-                }
-            }
-            std::cout << u32_to_utf8(str[i]);
+inline void findNext(NfaState* current, NfaSearchRecorder& recorder) {
+    if (recorder.visited_states.contains(current)) {
+        return;
+    }
+    NfaState* next1 = current->next1_;
+    NfaState* next2 = current->next2_;
+    recorder.visited_states.insert(current);
+    if (next1) {
+        if (next1->getType() == EPSILON) {
+            findNext(next1, recorder);
+        } else {
+            recorder.next_states.insert(next1);
         }
-        std::cout << std::endl;
-        if (!loop_segment.empty()) {
-            throw std::runtime_error("Cannot print loop segments");
+    }
+    if (next2) {
+        if (next2->getType() == EPSILON) {
+            findNext(next2, recorder);
+        } else {
+            recorder.next_states.insert(next2);
         }
     }
 }
 
-}  // namespace backtrack_
+inline std::unordered_set<NfaState*> searchNextStates(const std::unordered_set<NfaState*>& current_states) {
+    NfaSearchRecorder recorder = {};
+    for (const auto& state : current_states) {
+        findNext(state, recorder);
+    }
+    return std::move(recorder.next_states);
+}
+
+inline std::string getStateNames(std::unordered_set<NfaState*> states) {
+    std::string name;
+    name.reserve(states.size() * 10);
+
+    auto it = states.begin();
+    if (it != states.end()) {
+        name += (*it)->displayName(" ");
+        ++it;
+    }
+
+    for (; it != states.end(); ++it) {
+        name += "," + (*it)->displayName(" ");
+    }
+    return name;
+}
+
+inline std::string escapeMermaidChar(char32_t ch) {
+    std::string utf8_str = u32_to_utf8(ch);
+    if (utf8_str == "\"") return "\\\"";
+    if (utf8_str == "\n") return "\\n";
+    if (utf8_str == "\t") return "\\t";
+    if (utf8_str == "\r") return "\\r";
+    if (utf8_str == " ") return "SPACE";
+    return utf8_str;
+}
+
+inline void generateMermaid(std::ostream& out, DfaState* dfa_entry,
+                            std::unordered_map<std::unordered_set<NfaState*>, std::unique_ptr<DfaState>, DfaHash>& all_dfa_states) {
+    out << "```mermaid\n";
+    out << "stateDiagram-v2\n";
+
+    if (dfa_entry) {
+        out << "    [*] --> S" << dfa_entry->id << "\n";
+    }
+
+    for (const auto& [_, dfa_state_ptr] : all_dfa_states) {
+        const auto* state = dfa_state_ptr.get();
+        if (state->is_end) {
+            out << "    S" << state->id << " --> [*]\n";
+        }
+    }
+
+    for (const auto& [_, dfa_state_ptr] : all_dfa_states) {
+        const auto* from_state = dfa_state_ptr.get();
+
+        std::unordered_map<size_t, std::vector<char32_t>> grouped_transitions;
+        for (const auto& [ch, to_state] : from_state->transition_table) {
+            grouped_transitions[to_state->id].push_back(ch);
+        }
+
+        for (const auto& [to_id, chars] : grouped_transitions) {
+            out << "    S" << from_state->id << " --> S" << to_id << " : ";
+
+            for (size_t i = 0; i < chars.size(); ++i) {
+                if (i > 0) out << ", ";
+                out << escapeMermaidChar(chars[i]);
+            }
+            out << "\n";
+        }
+    }
+    out << "```\n\n";
+}

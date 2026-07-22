@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
 
     try {
         Pattern pattern(regex);
-        pattern.setEngine(EngineType::ParallelNFA);
+        pattern.setEngine(EngineType::DFA);
         bool result = pattern.match(str);
         std::cout << "Result: " << result << std::endl;
 

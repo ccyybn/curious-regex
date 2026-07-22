@@ -6,7 +6,7 @@
 #include "utils/unicode.hpp"
 
 TEST_CASE("Engine - Matching", "[engine]") {
-    auto engine_type = GENERATE(EngineType::Backtrack, EngineType::ParallelNFA);
+    auto engine_type = GENERATE(EngineType::Backtrack, EngineType::ParallelNFA, EngineType::DFA);
 
     auto make_pattern = [engine_type](const std::string& regex) {
         Pattern pattern(utf8_to_u32(regex));

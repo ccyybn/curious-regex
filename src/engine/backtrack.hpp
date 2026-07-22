@@ -5,7 +5,7 @@
 
 #include "automata/nfa_state.hpp"
 #include "engine.hpp"
-#include "helper.hpp"
+#include "printer.hpp"
 #include "utils/logger.hpp"
 
 namespace {
@@ -15,7 +15,7 @@ struct BacktrackPoint {
     NfaState* state;
     size_t cursor;
     std::unordered_map<NfaState*, size_t> loop_recorder;
-    std::queue<backtrack_::LoopSegment> loop_segments;
+    std::queue<printer::LoopSegment> loop_segments;
     size_t id = POINT_ID++;
 };
 
@@ -24,7 +24,7 @@ struct ProgressContext {
     const std::u32string_view& str;
     std::stack<BacktrackPoint> regression_stack;
     std::unordered_map<NfaState*, size_t> loop_recorder;
-    std::queue<backtrack_::LoopSegment> loop_segments;
+    std::queue<printer::LoopSegment> loop_segments;
     size_t cursor = 0;
     size_t track_id = 0;
 };
@@ -64,7 +64,7 @@ class BacktrackEngine : public IMatchEngine {
         std::stack<BacktrackPoint> regression_stack = context.regression_stack;
         int counter = 0;
         // used for loop slice printing, for example: aa,aa,b ; aa,a,a,b
-        std::vector<std::queue<backtrack_::LoopSegment>> loop_segment_recorder;
+        std::vector<std::queue<printer::LoopSegment>> loop_segment_recorder;
         bool match_result = false;
         while (true) {
             // counter++;
@@ -114,7 +114,7 @@ class BacktrackEngine : public IMatchEngine {
                 }
             } else if (current_state->getType() == END) {
                 loop_segment_recorder.push_back(std::move(context.loop_segments));
-                context.loop_segments = std::queue<backtrack_::LoopSegment>();
+                context.loop_segments = std::queue<printer::LoopSegment>();
                 if (cursor >= str.length()) {
                     std::cout << "Match successful." << std::endl;
                     match_result = true;

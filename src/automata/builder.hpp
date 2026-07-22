@@ -154,4 +154,24 @@ class NFABuilder {
         out << "Open this graphs drawing website and paste the above code: https://dreampuf.github.io/GraphvizOnline/?engine=dot";
         out << std::endl << std::endl;
     }
+
+    void exportMermaid(std::ostream& out) const {
+        out << "```mermaid\n";
+        out << "flowchart\n";
+
+        for (const auto& ptr : all_states_) {
+            NfaState* s = ptr.get();
+
+            std::string label = s->displayName("<br/>");
+
+            if (s->next1_) {
+                out << std::format("    N{}[\"{}\"] --> N{}\n", s->id_, label, s->next1_->id_);
+            }
+            if (s->next2_) {
+                out << std::format("    N{}[\"{}\"] --> N{}\n", s->id_, label, s->next2_->id_);
+            }
+        }
+
+        out << "```\n";
+    }
 };
