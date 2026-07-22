@@ -102,4 +102,14 @@ TEST_CASE("Engine - Matching", "[engine]") {
         REQUIRE(pattern.match(utf8_to_u32("aaaaa")) == true);
         REQUIRE(pattern.match(utf8_to_u32("b")) == false);
     }
+
+    SECTION("Incomplete Alternation") {
+        auto pattern = make_pattern("((a|)*c)*");
+        REQUIRE(pattern.match(utf8_to_u32("")) == true);
+        REQUIRE(pattern.match(utf8_to_u32("a")) == false);
+        REQUIRE(pattern.match(utf8_to_u32("c")) == true);
+        REQUIRE(pattern.match(utf8_to_u32("ccc")) == true);
+        REQUIRE(pattern.match(utf8_to_u32("acac")) == true);
+        REQUIRE(pattern.match(utf8_to_u32("acaca")) == false);
+    }
 }
