@@ -48,6 +48,7 @@ The builder takes the Abstract Syntax Tree (AST) and applies Thompson's construc
 
 ```mermaid
 flowchart
+    N22["BEGIN"] --> N1
     N13["(13)<br/>IN<br/>Char 6"] --> N15
     N14["(14)<br/>OUT<br/>Char 6"] --> N13
     N14["(14)<br/>OUT<br/>Char 6"] --> N12
@@ -76,6 +77,7 @@ flowchart
     N1["(1)<br/>IN<br/>Repeat 15"] --> N3
     N1["(1)<br/>IN<br/>Repeat 15"] --> N2
     N2["(2)<br/>OUT<br/>Repeat 15"] --> N0
+    N0["END"]
 ```
 
 ### Matching engine
