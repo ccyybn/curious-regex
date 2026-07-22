@@ -9,6 +9,7 @@ struct NFAFragment {
 class NFABuilder {
    private:
     AstNode& root_;
+    NfaState* entry_;
     std::vector<std::unique_ptr<NfaState>> all_states_;
 
    public:
@@ -21,7 +22,7 @@ class NFABuilder {
         NFAFragment frag = build(root_);
         link(frag.exit, end.get());
         all_states_.push_back(std::move(end));
-
+        entry_ = frag.entry;
         return {frag.entry, end_ptr};
     }
 
@@ -159,16 +160,24 @@ class NFABuilder {
         out << "```mermaid\n";
         out << "flowchart\n";
 
+        if (entry_) {
+            out << std::format("    N_BEGIN[\"BEGIN\"] --> N{}\n", entry_->id_);
+        }
+
         for (const auto& ptr : all_states_) {
             NfaState* s = ptr.get();
 
-            std::string label = s->displayName("<br/>");
+            std::string label = (s->type_ == END) ? "END" : s->displayName("<br/>");
 
             if (s->next1_) {
                 out << std::format("    N{}[\"{}\"] --> N{}\n", s->id_, label, s->next1_->id_);
             }
             if (s->next2_) {
                 out << std::format("    N{}[\"{}\"] --> N{}\n", s->id_, label, s->next2_->id_);
+            }
+
+            if (s->id_ == 0 && !s->next1_ && !s->next2_) {
+                out << "    N0[\"END\"]\n";
             }
         }
 

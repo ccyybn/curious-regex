@@ -48,7 +48,7 @@ The builder takes the Abstract Syntax Tree (AST) and applies Thompson's construc
 
 ```mermaid
 flowchart
-    N22["BEGIN"] --> N1
+    N_BEGIN["BEGIN"] --> N1
     N13["(13)<br/>IN<br/>Char 6"] --> N15
     N14["(14)<br/>OUT<br/>Char 6"] --> N13
     N14["(14)<br/>OUT<br/>Char 6"] --> N12
@@ -115,11 +115,12 @@ DFA-based string matching is much simpler and faster than NFA-based matching.
 The DFA for `((a*|b)*c)*`, converted from its NFA.
 
 ```mermaid
-stateDiagram-v2
-    [*] --> S0
-    S0 --> [*]
-    S1 --> S1 : b, a
-    S1 --> S0 : c
-    S0 --> S0 : c
-    S0 --> S1 : b, a
+flowchart LR
+    start((*)) --> S0
+    S0 --> stop((( )))
+
+    S1 -- "c" --> S0
+    S1 -- "b, a" --> S1
+    S0 -- "b, a" --> S1
+    S0 -- "c" --> S0
 ```

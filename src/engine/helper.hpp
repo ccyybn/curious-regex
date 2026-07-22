@@ -68,18 +68,20 @@ inline std::string escapeMermaidChar(char32_t ch) {
 inline void generateMermaid(std::ostream& out, DfaState* dfa_entry,
                             std::unordered_map<std::unordered_set<NfaState*>, std::unique_ptr<DfaState>, DfaHash>& all_dfa_states) {
     out << "```mermaid\n";
-    out << "stateDiagram-v2\n";
+    out << "flowchart LR\n";
 
     if (dfa_entry) {
-        out << "    [*] --> S" << dfa_entry->id << "\n";
+        out << "    start((*)) --> S" << dfa_entry->id << "\n";
     }
 
     for (const auto& [_, dfa_state_ptr] : all_dfa_states) {
         const auto* state = dfa_state_ptr.get();
         if (state->is_end) {
-            out << "    S" << state->id << " --> [*]\n";
+            out << "    S" << state->id << " --> stop((( )))\n";
         }
     }
+
+    out << "\n";
 
     for (const auto& [_, dfa_state_ptr] : all_dfa_states) {
         const auto* from_state = dfa_state_ptr.get();
@@ -89,14 +91,26 @@ inline void generateMermaid(std::ostream& out, DfaState* dfa_entry,
             grouped_transitions[to_state->id].push_back(ch);
         }
 
-        for (const auto& [to_id, chars] : grouped_transitions) {
-            out << "    S" << from_state->id << " --> S" << to_id << " : ";
+        using TransitionPair = std::pair<size_t, std::vector<char32_t>>;
+        std::vector<TransitionPair> transitions(grouped_transitions.begin(), grouped_transitions.end());
+
+        std::sort(transitions.begin(), transitions.end(), [from_id = from_state->id](const TransitionPair& a, const TransitionPair& b) {
+            bool a_is_loop = (a.first == from_id);
+            bool b_is_loop = (b.first == from_id);
+            if (a_is_loop != b_is_loop) {
+                return !a_is_loop;
+            }
+            return a.first < b.first;
+        });
+
+        for (const auto& [to_id, chars] : transitions) {
+            out << "    S" << from_state->id << " -- \"";
 
             for (size_t i = 0; i < chars.size(); ++i) {
                 if (i > 0) out << ", ";
                 out << escapeMermaidChar(chars[i]);
             }
-            out << "\n";
+            out << "\" --> S" << to_id << "\n";
         }
     }
     out << "```\n\n";
